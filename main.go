@@ -27,6 +27,7 @@ type userPlate struct {
 	Name     string `json:"name"`
 	Email    string `bson:"email,omitempty" json:"email,omitempty"`
 	Password string `bson:"password,omitempty" json:"password,omitempty"`
+	Text     string `bson:"text,omitempty" json:"text,omitempty"`
 }
 
 var dbClient *mongo.Client
@@ -79,8 +80,8 @@ func postJson(w http.ResponseWriter, r *http.Request) {
 }
 
 // have to pass dbclient pointer
-func getFromDB(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("Got request: /QueryDB \n")
+func getOneFromDB(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("Got request: /getOneFromDB \n")
 
 	//read in body from the request
 
@@ -108,7 +109,7 @@ func getFromDB(w http.ResponseWriter, r *http.Request) {
 	coll := dbClient.Database("sample_mflix").Collection("users")
 
 	var result userPlate
-	filter := bson.D{{"name", "Ned Stark"}}
+	filter := bson.D{{"name", user.Name}}
 
 	err = coll.FindOne(context.TODO(), filter).Decode(&result)
 	if err != nil {
@@ -131,6 +132,72 @@ func getFromDB(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonData)
 	fmt.Printf("User found: %s \n", result.Name)
+
+}
+
+func getManyFromDB(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("Got request: /getManyfromDB \n")
+
+	//read in body from the request
+
+	//body is a byte stream [] not actually a json object
+	//that is why we need to unmarshall and marshall when receiving and responding
+	//that is also why its important to have struct templates so that you can easily parse data
+	//from the received byte streams [] into the structs for more functional use
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		fmt.Printf("Error parsing json body")
+		return
+	}
+
+	//create template users for unmarshalling
+	//
+	var user userPlate
+	err = json.Unmarshal(body, &user)
+	if err != nil {
+		fmt.Printf("Error unmarshalling data into prebuilt struct")
+		return
+	}
+
+	fmt.Println(user.Name, user.Email, user.Password)
+
+	coll := dbClient.Database("sample_mflix").Collection("comments")
+
+	filter := bson.D{{"name", user.Name}}
+
+	cursor, err := coll.Find(context.TODO(), filter)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			fmt.Printf("No data found in given db/collection for filter: %v \n", filter)
+			return
+		}
+		fmt.Printf("Error querying db: %v \n", err)
+		return
+	}
+
+	var results []userPlate
+	if err = cursor.All(context.TODO(), &results); err != nil {
+		fmt.Printf("Failed to append db response to userPlate array")
+	}
+
+	for _, result := range results {
+		res, _ := bson.MarshalExtJSON(result, false, false)
+		fmt.Println("comment------------- \n", string(res))
+	}
+
+	/*
+		jsonData, err := json.Marshal(result)
+		if err != nil {
+			http.Error(w, "Error marshalling json data", http.StatusInternalServerError)
+			fmt.Printf("error marshalling json data: %v \n", err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonData)
+		fmt.Printf("User found: %s \n", result.Name)
+	*/
 
 }
 
@@ -177,7 +244,8 @@ func main() {
 	r.HandleFunc("/hello", getHello)
 	r.HandleFunc("/getJSON", getJson).Methods("GET")
 	r.HandleFunc("/postJSON", postJson).Methods("POST")
-	r.HandleFunc("/QueryDB", getFromDB).Methods("POST")
+	r.HandleFunc("/getOneFromDB", getOneFromDB).Methods("GET")
+	r.HandleFunc("/getManyFromDB", getManyFromDB).Methods("GET")
 	http.Handle("/", r)
 	//http.HandleFunc("/", getRoot)
 	//http.HandleFunc("/hello", getHello)
@@ -186,6 +254,7 @@ func main() {
 		err := http.ListenAndServe(":3333", nil)
 		if errors.Is(err, http.ErrServerClosed) {
 			fmt.Printf("server closed \n")
+			os.Exit(1)
 		} else if err != nil {
 			fmt.Printf("error starting server: %s \n", err)
 			os.Exit(1)
