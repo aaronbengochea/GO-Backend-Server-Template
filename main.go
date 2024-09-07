@@ -185,6 +185,8 @@ func getManyFromDB(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("comment------------- \n", string(res))
 	}
 
+	//Need to now send of the data to the client, successfully queried and returned a rango of results
+
 	/*
 		jsonData, err := json.Marshal(result)
 		if err != nil {
