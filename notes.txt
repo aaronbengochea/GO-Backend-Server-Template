@@ -1,0 +1,5 @@
+1) Next add basic handlers for routes
+2) Build out structs to parse data in and out of for get/posts
+3) Look into jwt tokens for authorization
+4) Test more advanced queries on mongoDB
+5) add support for postgresql as well just incase I decide to use it in some future
