@@ -205,17 +205,20 @@ func getManyFromDB(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
+	//loading env file
 	if err := godotenv.Load(); err != nil {
 		fmt.Println("No .env file found at root")
 		os.Exit(1)
 	}
 
+	//getting db uri using env
 	var uri string
 	if uri = os.Getenv("MONGODB_URI"); uri == "" {
 		fmt.Println("Error with mongodb uri setting in .env file at root")
 		os.Exit(1)
 	}
 
+	//connecting to db
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.Client().ApplyURI(uri).SetServerAPIOptions(serverAPI)
 
@@ -240,6 +243,7 @@ func main() {
 
 	fmt.Printf("Successfully Connected to mongoDB deployment \n")
 
+	//Router
 	r := mux.NewRouter()
 
 	r.HandleFunc("/", getRoot)
@@ -252,6 +256,7 @@ func main() {
 	//http.HandleFunc("/", getRoot)
 	//http.HandleFunc("/hello", getHello)
 
+	//GO func initializing our server
 	go func() {
 		err := http.ListenAndServe(":3333", nil)
 		if errors.Is(err, http.ErrServerClosed) {
@@ -264,5 +269,6 @@ func main() {
 	}()
 
 	fmt.Printf("Server is listening on port 3333 \n")
+	//Keeps the function running
 	select {}
 }
