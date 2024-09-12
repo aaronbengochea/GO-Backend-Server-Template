@@ -3,3 +3,5 @@
 3) Look into jwt tokens for authorization
 4) Test more advanced queries on mongoDB
 5) add support for postgresql as well just incase I decide to use it in some future
+
+Use this template to build out the neighborhood backend as a new project, practice my go
